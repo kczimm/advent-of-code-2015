@@ -11,6 +11,20 @@ For example:
     A present with dimensions 1x1x10 requires 2*1 + 2*10 + 2*10 = 42 square feet of wrapping paper plus 1 square foot of slack, for a total of 43 square feet.
 
 All numbers in the elves' list are in feet. How many total square feet of wrapping paper should they order?
+
+--- Part Two ---
+
+The elves are also running low on ribbon. Ribbon is all the same width, so they only have to worry about the length they need to order, which they would again like to be exact.
+
+The ribbon required to wrap a present is the shortest distance around its sides, or the smallest perimeter of any one face. Each present also requires a bow made out of ribbon as well; the feet of ribbon required for the perfect bow is equal to the cubic feet of volume of the present. Don't ask how they tie the bow, though; they'll never tell.
+
+For example:
+
+    A present with dimensions 2x3x4 requires 2+2+3+3 = 10 feet of ribbon to wrap the present plus 2*3*4 = 24 feet of ribbon for the bow, for a total of 34 feet.
+    A present with dimensions 1x1x10 requires 1+1+1+1 = 4 feet of ribbon to wrap the present plus 1*1*10 = 10 feet of ribbon for the bow, for a total of 14 feet.
+
+How many total feet of ribbon should they order?
+
 */
 
 use util::load;
@@ -23,6 +37,7 @@ fn main() -> io::Result<()> {
     let presents = read_list(&list);
 
     println!("part1: {}", total_wrapping_paper(&presents));
+    println!("part2: {}", total_ribbon(&presents));
 
     Ok(())
 }
@@ -38,6 +53,10 @@ fn read_list(list: &str) -> Vec<Present> {
 
 fn total_wrapping_paper(presents: &Vec<Present>) -> SquareFeet {
     presents.iter().map(|p| p.surface_area()).sum()
+}
+
+fn total_ribbon(presents: &Vec<Present>) -> Length {
+    presents.iter().map(|p| p.required_ribbon()).sum()
 }
 
 struct Present {
@@ -80,6 +99,21 @@ impl Present {
             .unwrap();
         2 * (side1 + side2 + side3) + smallest
     }
+
+    fn required_ribbon(&self) -> Length {
+        let bow_length = self.dimensions.0 * self.dimensions.1 * self.dimensions.2;
+        let ribbon_length = if self.dimensions.0 > self.dimensions.1
+            && self.dimensions.0 > self.dimensions.2
+        {
+            2 * (self.dimensions.1 + self.dimensions.2)
+        } else if self.dimensions.1 > self.dimensions.0 && self.dimensions.1 > self.dimensions.2 {
+            2 * (self.dimensions.0 + self.dimensions.2)
+        } else {
+            2 * (self.dimensions.0 + self.dimensions.1)
+        };
+
+        ribbon_length + bow_length
+    }
 }
 
 #[cfg(test)]
@@ -93,5 +127,35 @@ mod tests {
 
         let present = Present::from("1x1x10");
         assert_eq!(present.surface_area(), 43);
+    }
+
+    #[test]
+    fn test_required_ribbon() {
+        let present = Present::from("2x3x4");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("2x4x3");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("3x2x4");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("3x4x2");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("4x2x3");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("4x3x2");
+        assert_eq!(present.required_ribbon(), 34);
+
+        let present = Present::from("1x1x10");
+        assert_eq!(present.required_ribbon(), 14);
+
+        let present = Present::from("10x1x1");
+        assert_eq!(present.required_ribbon(), 14);
+
+        let present = Present::from("1x10x1");
+        assert_eq!(present.required_ribbon(), 14);
     }
 }
