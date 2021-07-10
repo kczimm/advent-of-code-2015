@@ -18,6 +18,25 @@ For example:
     dvszwmarrgswjxmb is naughty because it contains only one vowel.
 
 How many strings are nice?
+
+--- Part Two ---
+
+Realizing the error of his ways, Santa has switched to a better model of determining whether a string is naughty or nice. None of the old rules apply, as they are all clearly ridiculous.
+
+Now, a nice string is one with all of the following properties:
+
+    It contains a pair of any two letters that appears at least twice in the string without overlapping, like xyxy (xy) or aabcdefgaa (aa), but not like aaa (aa, but it overlaps).
+    It contains at least one letter which repeats with exactly one letter between them, like xyx, abcdefeghi (efe), or even aaa.
+
+For example:
+
+    qjhvhtzxzqqjkmpb is nice because is has a pair that appears twice (qj) and a letter that repeats with exactly one letter between them (zxz).
+    xxyxx is nice because it has a pair that appears twice and a letter that repeats with one between, even though the letters used by each rule overlap.
+    uurcxstgmygtbstg is naughty because it has a pair (tg) but no repeat with a single letter between them.
+    ieodomkazucvgmuy is naughty because it has a repeating letter with one between (odo), but no pair that appears twice.
+
+How many strings are nice under these new rules?
+
 */
 
 use util::load;
@@ -28,6 +47,7 @@ fn main() -> io::Result<()> {
     let text = load("src/day5/input.txt")?;
 
     println!("part1: {}", number_of_nice_strings(&text));
+    println!("part2: {}", number_of_nicer_strings(&text));
 
     Ok(())
 }
@@ -35,6 +55,12 @@ fn main() -> io::Result<()> {
 fn number_of_nice_strings(text: &str) -> usize {
     text.lines()
         .filter(|s| SantaString::from(s).is_nice())
+        .count()
+}
+
+fn number_of_nicer_strings(text: &str) -> usize {
+    text.lines()
+        .filter(|s| SantaString::from(s).is_nicer())
         .count()
 }
 
@@ -51,6 +77,10 @@ impl<'a> SantaString<'a> {
         self.contains_three_vowels() & self.has_repeated_letter() & self.has_no_forbidden_combos()
     }
 
+    fn is_nicer(&self) -> bool {
+        self.has_repeated_pair_without_overlap() & self.contains_repeat_with_one_letter_between()
+    }
+
     fn contains_three_vowels(&self) -> bool {
         self.0
             .chars()
@@ -63,13 +93,51 @@ impl<'a> SantaString<'a> {
     }
 
     fn has_repeated_letter(&self) -> bool {
-        let mut prev = self.0.chars().next().expect("string has no characters");
+        let mut prev = match self.0.chars().next() {
+            Some(p) => p,
+            _ => return false,
+        };
         for c in self.0.chars().skip(1) {
             if c == prev {
                 return true;
             }
             prev = c;
         }
+        false
+    }
+
+    fn has_repeated_pair_without_overlap(&self) -> bool {
+        for i in 0..self.0.len() - 3 {
+            let this = &self.0[i..i + 2];
+            for j in i + 1..self.0.len() - 1 {
+                let that = &self.0[j..j + 2];
+                if this == that {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn contains_repeat_with_one_letter_between(&self) -> bool {
+        let mut chars = self.0.chars();
+        let mut prev2 = match chars.next() {
+            Some(p) => p,
+            _ => return false,
+        };
+        let mut prev = match chars.next() {
+            Some(p) => p,
+            _ => return false,
+        };
+
+        for c in self.0.chars().skip(2) {
+            if c == prev2 {
+                return true;
+            }
+            prev2 = prev;
+            prev = c;
+        }
+
         false
     }
 
@@ -81,6 +149,51 @@ impl<'a> SantaString<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_is_nicer() {
+        let s = SantaString::from("qjhvhtzxzqqjkmpb");
+        assert!(s.is_nicer());
+
+        let s = SantaString::from("xxyxx");
+        assert!(s.is_nicer());
+
+        let s = SantaString::from("uurcxstgmygtbstg");
+        assert!(!s.is_nicer());
+
+        let s = SantaString::from("ieodomkazucvgmuy");
+        assert!(!s.is_nicer());
+    }
+
+    #[test]
+    fn test_contains_repeat_with_one_letter_between() {
+        let s = SantaString::from("xyxy");
+        assert!(s.contains_repeat_with_one_letter_between());
+
+        let s = SantaString::from("abcdefeghi");
+        assert!(s.contains_repeat_with_one_letter_between());
+
+        let s = SantaString::from("aaa");
+        assert!(s.contains_repeat_with_one_letter_between());
+
+        let s = SantaString::from("ieodomkazucvgmuy");
+        assert!(s.contains_repeat_with_one_letter_between());
+    }
+
+    #[test]
+    fn test_has_repeated_pair_without_overlap() {
+        let s = SantaString::from("xyxy");
+        assert!(s.has_repeated_pair_without_overlap());
+
+        let s = SantaString::from("aabcdefgaa");
+        assert!(s.has_repeated_pair_without_overlap());
+
+        let s = SantaString::from("aaa");
+        assert!(!s.has_repeated_pair_without_overlap());
+
+        let s = SantaString::from("ieodomkazucvgmuy");
+        assert!(!s.has_repeated_pair_without_overlap());
+    }
 
     #[test]
     fn test_is_nice() {
