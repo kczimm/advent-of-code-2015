@@ -54,7 +54,7 @@ fn main() -> io::Result<()> {
     println!("part1: {}", lights.num_lit_lights());
 
     let mut lights = Lights::new();
-    lights.do_instructions(&instructions);
+    lights.do_new_instructions(&instructions);
     println!("part2: {}", lights.total_brightness());
 
     Ok(())
@@ -62,11 +62,7 @@ fn main() -> io::Result<()> {
 
 const GRID_DIM: usize = 1000;
 
-#[derive(Clone, Copy)]
-enum LightState {
-    On,
-    Off,
-}
+type Brightness = usize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Coordinate(usize, usize);
@@ -87,18 +83,24 @@ impl Coordinate {
 type CoordinatePair = (Coordinate, Coordinate);
 
 struct Lights {
-    grid: [[LightState; GRID_DIM]; GRID_DIM],
+    grid: Vec<Vec<Brightness>>,
 }
 
 impl Lights {
     fn new() -> Self {
         Self {
-            grid: [[LightState::Off; GRID_DIM]; GRID_DIM],
+            grid: vec![vec![0; GRID_DIM]; GRID_DIM],
         }
     }
 
-    fn total_brightness(&self) -> usize {
-        0
+    fn total_brightness(&self) -> Brightness {
+        self.grid
+            .iter()
+            .map(|row| {
+                let brightness: usize = row.iter().sum();
+                brightness
+            })
+            .sum()
     }
 
     fn do_instruction(&mut self, instruction: Instruction) {
@@ -106,14 +108,9 @@ impl Lights {
         for i in c1.0..=c2.0 {
             for j in c1.1..=c2.1 {
                 match instruction.action {
-                    LightAction::TurnOff => self.grid[i][j] = LightState::Off,
-                    LightAction::TurnOn => self.grid[i][j] = LightState::On,
-                    LightAction::Toggle => {
-                        self.grid[i][j] = match self.grid[i][j] {
-                            LightState::On => LightState::Off,
-                            LightState::Off => LightState::On,
-                        }
-                    }
+                    LightAction::TurnOff => self.grid[i][j] = 0,
+                    LightAction::TurnOn => self.grid[i][j] = 1,
+                    LightAction::Toggle => self.grid[i][j] ^= 1,
                 }
             }
         }
@@ -125,18 +122,35 @@ impl Lights {
             .for_each(|instruction| self.do_instruction(*instruction));
     }
 
+    fn do_new_instruction(&mut self, instruction: Instruction) {
+        let (c1, c2) = instruction.coordinates;
+        for i in c1.0..=c2.0 {
+            for j in c1.1..=c2.1 {
+                match instruction.action {
+                    LightAction::TurnOn => self.grid[i][j] += 1,
+                    LightAction::TurnOff => {
+                        self.grid[i][j] = if self.grid[i][j] == 0 {
+                            0
+                        } else {
+                            self.grid[i][j] - 1
+                        }
+                    }
+                    LightAction::Toggle => self.grid[i][j] += 2,
+                }
+            }
+        }
+    }
+
+    fn do_new_instructions(&mut self, instructions: &Vec<Instruction>) {
+        instructions
+            .iter()
+            .for_each(|instruction| self.do_new_instruction(*instruction));
+    }
+
     fn num_lit_lights(&self) -> usize {
         self.grid
             .iter()
-            .map(|inner| {
-                inner
-                    .iter()
-                    .filter(|state| match state {
-                        LightState::On => true,
-                        _ => false,
-                    })
-                    .count()
-            })
+            .map(|inner| inner.iter().filter(|brightness| **brightness == 1).count())
             .sum()
     }
 }
@@ -193,6 +207,30 @@ impl Instruction {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_do_instruction() {
+        let mut lights = Lights::new();
+        lights.do_instruction(Instruction {
+            coordinates: (Coordinate(0, 0), Coordinate(999, 999)),
+            action: LightAction::TurnOn,
+        });
+        assert_eq!(lights.num_lit_lights(), 1_000_000);
+
+        let mut lights = Lights::new();
+        lights.do_instruction(Instruction {
+            coordinates: (Coordinate(0, 0), Coordinate(999, 0)),
+            action: LightAction::Toggle,
+        });
+        assert_eq!(lights.num_lit_lights(), 1_000);
+
+        let mut lights = Lights::new();
+        lights.do_instruction(Instruction {
+            coordinates: (Coordinate(499, 499), Coordinate(500, 500)),
+            action: LightAction::Toggle,
+        });
+        assert_eq!(lights.num_lit_lights(), 4);
+    }
 
     #[test]
     fn test_coordinate_from() {
