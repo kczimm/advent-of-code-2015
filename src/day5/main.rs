@@ -191,6 +191,12 @@ mod tests {
         let s = SantaString::from("aaa");
         assert!(!s.has_repeated_pair_without_overlap());
 
+        let s = SantaString::from("aaaa");
+        assert!(s.has_repeated_pair_without_overlap());
+
+        let s = SantaString::from("uurcxstgmygtbstg");
+        assert!(s.has_repeated_pair_without_overlap());
+
         let s = SantaString::from("ieodomkazucvgmuy");
         assert!(!s.has_repeated_pair_without_overlap());
     }
